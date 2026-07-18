@@ -8,7 +8,7 @@ This file records material work completed with Codex during OpenAI Build Week.
 - Primary implementation date: `2026-07-18`
 - Branch: `codex/build-week-primary`
 - Authoritative task: GitHub Issue #2, “Primary Codex implementation session for OpenAI Build Week”
-- Implementation commit: `PENDING UNTIL VALIDATED IMPLEMENTATION COMMIT`
+- Implementation commit: `51d6c5a` (`Implement governed Build Week workflow`)
 
 ## Repository audit
 
