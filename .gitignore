@@ -6,6 +6,7 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
+*.egg-info/
 .env
 boundedrun.db
 .DS_Store

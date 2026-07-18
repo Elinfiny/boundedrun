@@ -84,7 +84,13 @@ def execute_bounded(
         )
     else:
         artifact = _test_artifact(objective)
-        content_check = all(json.loads(artifact).values())
+        payload = json.loads(artifact)
+        content_check = (
+            payload["objective_present"] is True
+            and payload["minimum_length"] is True
+            and payload["bounded_mode"] is True
+            and payload["external_mutation"] is False
+        )
 
     digest = sha256(artifact.encode("utf-8")).hexdigest()
     validations = [

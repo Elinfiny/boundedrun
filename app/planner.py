@@ -2,15 +2,21 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
 
-from app.models import ExecutionPlan, Handler, PlanStep, PolicyDecision, RiskLevel
+from app.models import (
+    ExecutionPlan,
+    Handler,
+    PlannerProvenance,
+    PlanStep,
+    PolicyDecision,
+    RiskLevel,
+)
+
+AI_MODEL = "gpt-5.6"
 
 SYSTEM_PROMPT = """
 You are the planning component of BoundedRun, a governed execution system.
-Return JSON only with these keys: summary, handler, steps, validation_gates,
-protected_boundaries. handler must be one of documentation_update,
-configuration_review, test_validation, none. Use only the smallest safe handler.
+Follow the supplied ExecutionPlan schema exactly. Use only the smallest safe handler.
 Never authorize secrets, production deployment, financial actions, destructive
 changes, personal data access, force-push, or external account mutation.
 Each step must contain order, action, and evidence.
@@ -79,38 +85,79 @@ def deterministic_plan(objective: str, decision: PolicyDecision) -> ExecutionPla
     )
 
 
-def _extract_json(text: str) -> dict[str, Any]:
-    start = text.find("{")
-    end = text.rfind("}")
-    if start < 0 or end < start:
-        raise ValueError("Planner response did not contain a JSON object")
-    return json.loads(text[start : end + 1])
-
-
 def ai_plan(objective: str, decision: PolicyDecision) -> ExecutionPlan:
     from openai import OpenAI
 
     client = OpenAI()
-    response = client.responses.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-5.6"),
-        instructions=SYSTEM_PROMPT,
-        input=json.dumps(
+    response = client.responses.parse(
+        model=AI_MODEL,
+        input=[
             {
-                "objective": objective,
-                "policy_decision": decision.model_dump(mode="json"),
-            }
-        ),
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Create a bounded execution plan for this input:\n"
+                    + json.dumps(
+                        {
+                            "objective": objective,
+                            "policy_decision": decision.model_dump(mode="json"),
+                        }
+                    )
+                ),
+            },
+        ],
+        text_format=ExecutionPlan,
     )
-    return ExecutionPlan.model_validate(_extract_json(response.output_text))
+    if response.output_parsed is None:
+        raise ValueError("Planner response did not contain a parsed execution plan")
+    plan = ExecutionPlan.model_validate(response.output_parsed)
+    if decision.risk_level == RiskLevel.PROTECTED and plan.handler != Handler.NONE:
+        raise ValueError("Protected objectives must use the none handler")
+    if decision.risk_level != RiskLevel.PROTECTED and plan.handler == Handler.NONE:
+        raise ValueError("Non-protected objectives require an allow-listed handler")
+    return plan
 
 
 def create_plan(
     objective: str, decision: PolicyDecision, use_ai: bool
-) -> tuple[ExecutionPlan, str]:
+) -> tuple[ExecutionPlan, PlannerProvenance]:
     if use_ai and os.getenv("OPENAI_API_KEY"):
         try:
-            return ai_plan(objective, decision), "gpt-5.6"
-        except Exception:
-            # The demo remains functional and auditable even when the network/model is unavailable.
-            pass
-    return deterministic_plan(objective, decision), "deterministic"
+            return ai_plan(objective, decision), PlannerProvenance(
+                source="openai_responses",
+                model=AI_MODEL,
+                ai_requested=True,
+                ai_attempted=True,
+                fallback_used=False,
+                detail="Strict Responses API output validated into ExecutionPlan.",
+            )
+        except Exception as error:
+            return deterministic_plan(objective, decision), PlannerProvenance(
+                source="deterministic",
+                model="deterministic",
+                ai_requested=True,
+                ai_attempted=True,
+                fallback_used=True,
+                detail=(
+                    "GPT-5.6 planning failed; deterministic fallback used "
+                    f"({type(error).__name__})."
+                ),
+            )
+
+    if use_ai:
+        detail = "OPENAI_API_KEY is not configured; deterministic fallback used."
+        fallback_used = True
+    else:
+        detail = "Deterministic planning was selected for this run."
+        fallback_used = False
+    return deterministic_plan(objective, decision), PlannerProvenance(
+        source="deterministic",
+        model="deterministic",
+        ai_requested=use_ai,
+        ai_attempted=False,
+        fallback_used=fallback_used,
+        detail=detail,
+    )
