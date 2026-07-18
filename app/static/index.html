@@ -3,67 +3,143 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BoundedRun</title>
+  <meta name="description" content="Governed AI execution with bounded handlers and audit receipts.">
+  <title>BoundedRun · Governed Codex work packages</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to the run composer</a>
   <header class="hero">
     <div class="shell">
       <div class="eyebrow">OPENAI BUILD WEEK · DEVELOPER TOOLS</div>
-      <h1>BoundedRun</h1>
-      <p>Turn an objective into a bounded Codex work package with explicit risk gates, deterministic validation, and an auditable receipt.</p>
+      <h1>Bounded<span>Run</span></h1>
+      <p>Turn an objective into a repository-scoped Codex work package with explicit risk gates, deterministic validation, and an auditable receipt.</p>
+      <div class="hero-proof" aria-label="System boundaries">
+        <span>3 allow-listed handlers</span>
+        <span>0 arbitrary commands</span>
+        <span>Deterministic fallback</span>
+      </div>
     </div>
   </header>
 
-  <main class="shell grid">
-    <section class="panel composer">
-      <div class="panel-heading">
-        <div>
-          <span class="step">01</span>
-          <h2>Define an objective</h2>
+  <main id="main" class="shell">
+    <div class="grid">
+      <section class="panel composer" aria-labelledby="compose-title">
+        <div class="panel-heading">
+          <div>
+            <span class="step">01</span>
+            <h2 id="compose-title">Define an objective</h2>
+          </div>
+          <span class="mode">isolated demo</span>
         </div>
-        <span class="mode">isolated demo</span>
-      </div>
-      <textarea id="objective" rows="6">Add repository contribution guidelines and validate that governance boundaries are documented.</textarea>
-      <label class="toggle"><input id="use-ai" type="checkbox" checked> Use GPT-5.6 when an API key is configured</label>
-      <div class="actions">
-        <button data-scenario="safe">Load safe scenario</button>
-        <button data-scenario="blocked" class="secondary">Load protected scenario</button>
-        <button id="run" class="primary">Create bounded run</button>
-      </div>
-      <p class="boundary">No arbitrary shell commands. No secrets. No production access. Only allow-listed handlers execute.</p>
-    </section>
 
-    <section class="panel result-panel">
+        <label class="field-label" for="objective">Software objective</label>
+        <textarea id="objective" rows="7" maxlength="1200" aria-describedby="objective-help boundary">Add repository contribution guidelines and validate that governance boundaries are documented.</textarea>
+        <div class="field-meta">
+          <span id="objective-help">Minimum 8 characters</span>
+          <span id="character-count">88 / 1200</span>
+        </div>
+
+        <label class="toggle" for="use-ai">
+          <input id="use-ai" type="checkbox" checked>
+          <span><strong>Use GPT-5.6</strong> when an API key is configured; otherwise show the deterministic fallback.</span>
+        </label>
+
+        <fieldset class="scenarios">
+          <legend>Demo scenarios</legend>
+          <button type="button" data-scenario="safe" class="scenario-safe">Safe documentation</button>
+          <button type="button" data-scenario="blocked" class="scenario-protected">Protected operation</button>
+        </fieldset>
+
+        <button id="run" type="button" class="primary run-button">
+          <span>Create bounded run</span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <p id="form-error" class="error-message" role="alert" hidden></p>
+        <p id="boundary" class="boundary">No arbitrary shell commands. No secrets. No production access. Only allow-listed local handlers execute.</p>
+      </section>
+
+      <section id="result-panel" class="panel result-panel" aria-labelledby="result-title" aria-busy="false">
+        <div class="panel-heading">
+          <div>
+            <span class="step">02</span>
+            <h2 id="result-title">Decision and evidence</h2>
+          </div>
+          <span id="status" class="status idle" role="status" aria-live="polite">ready</span>
+        </div>
+
+        <div id="empty" class="empty">
+          <div class="empty-mark" aria-hidden="true">◇</div>
+          <p>Run an objective or reopen a receipt to inspect its policy, plan, evidence, and export.</p>
+        </div>
+
+        <div id="result" hidden>
+          <div class="metrics">
+            <div><span>Planner</span><strong id="planner"></strong></div>
+            <div><span>Risk</span><strong id="risk"></strong></div>
+            <div><span>Handler</span><strong id="handler"></strong></div>
+          </div>
+
+          <div id="evidence-summary" class="evidence-summary"></div>
+          <div id="provenance" class="provenance"></div>
+
+          <div class="policy-grid">
+            <div>
+              <h3>Allowed</h3>
+              <ul id="allowed-actions" class="compact-list"></ul>
+            </div>
+            <div>
+              <h3>Blocked</h3>
+              <ul id="blocked-actions" class="compact-list"></ul>
+            </div>
+          </div>
+
+          <h3>Ordered plan</h3>
+          <ol id="steps" class="plan-steps"></ol>
+          <h3>Validation evidence</h3>
+          <div id="validations"></div>
+
+          <div class="artifact-row">
+            <div>
+              <h3>Artifact SHA-256</h3>
+              <code id="artifact-hash"></code>
+            </div>
+          </div>
+
+          <h3>Next action</h3>
+          <p id="next-action"></p>
+
+          <div class="export-actions" aria-label="Download Codex work package">
+            <a id="export-markdown" class="button-link primary" href="#" download hidden>Download Markdown</a>
+            <a id="export-json" class="button-link" href="#" download hidden>Download JSON</a>
+          </div>
+
+          <details>
+            <summary>Full receipt JSON</summary>
+            <pre id="receipt"></pre>
+          </details>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel history-panel" aria-labelledby="history-title">
       <div class="panel-heading">
         <div>
-          <span class="step">02</span>
-          <h2>Decision and evidence</h2>
+          <span class="step">03</span>
+          <h2 id="history-title">Stored run history</h2>
         </div>
-        <span id="status" class="status idle">ready</span>
+        <button id="refresh-history" type="button" class="quiet-button">Refresh</button>
       </div>
-      <div id="empty" class="empty">Run an objective to see the plan, policy decision, validation gates, and receipt.</div>
-      <div id="result" hidden>
-        <div class="metrics">
-          <div><span>Planner</span><strong id="planner"></strong></div>
-          <div><span>Risk</span><strong id="risk"></strong></div>
-          <div><span>Handler</span><strong id="handler"></strong></div>
-        </div>
-        <h3>Plan</h3>
-        <ol id="steps"></ol>
-        <h3>Validation</h3>
-        <div id="validations"></div>
-        <h3>Next action</h3>
-        <p id="next-action"></p>
-        <details>
-          <summary>Receipt JSON</summary>
-          <pre id="receipt"></pre>
-        </details>
-      </div>
+      <p class="section-intro">Receipts are stored locally in SQLite. Reopen any run without repeating execution.</p>
+      <p id="history-status" class="history-status" role="status" aria-live="polite">Loading receipts…</p>
+      <div id="history" class="history-list"></div>
     </section>
   </main>
 
-  <footer class="shell footer">Built with GPT-5.6, Codex, FastAPI, SQLite, and deterministic policy gates.</footer>
+  <footer class="shell footer">
+    <span>BoundedRun</span>
+    <span>GPT-5.6 · Codex · FastAPI · SQLite · deterministic policy gates</span>
+  </footer>
   <script src="/static/app.js"></script>
 </body>
 </html>

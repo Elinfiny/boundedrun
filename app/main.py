@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from app.exporter import build_work_package, render_markdown
 from app.models import RunReceipt, RunRequest
 from app.service import run_objective
 from app.store import get_receipt, initialize, list_receipts
@@ -56,3 +58,28 @@ def read_run(run_id: str) -> RunReceipt:
     if not receipt:
         raise HTTPException(status_code=404, detail="Run not found")
     return receipt
+
+
+@app.get("/api/runs/{run_id}/export")
+def export_run(
+    run_id: str,
+    format: Literal["markdown", "json"] = Query(default="markdown"),
+) -> Response:
+    receipt = get_receipt(run_id)
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    package = build_work_package(receipt)
+    suffix = "md" if format == "markdown" else "json"
+    filename = f"boundedrun-{run_id}.{suffix}"
+    if format == "markdown":
+        content = render_markdown(package)
+        media_type = "text/markdown"
+    else:
+        content = package.model_dump_json(indent=2)
+        media_type = "application/json"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
