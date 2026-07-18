@@ -4,7 +4,7 @@ This file records material work completed with Codex during OpenAI Build Week.
 
 ## Primary session
 
-- `/feedback` Session ID: `PENDING`
+- `/feedback` Session ID: `019f755c-0457-7ac0-9166-385627db5772`
 - Primary implementation date: `2026-07-18`
 - Branch: `codex/build-week-primary`
 - Authoritative task: GitHub Issue #2, “Primary Codex implementation session for OpenAI Build Week”
@@ -52,4 +52,4 @@ The audit identified these material gaps:
 - Browser QA: passed safe/protected/history flows at the default desktop viewport and responsive layout at 390×844; no browser console warnings or errors.
 - JavaScript syntax: `node --check app/static/app.js` passed.
 
-The `/feedback` Session ID intentionally remains `PENDING` until the operator obtains it at the end of this primary Codex session.
+The Session ID above identifies the primary Codex implementation task used for the Build Week submission evidence.
