@@ -1,0 +1,69 @@
+name: Validate BoundedRun Global V3 Convergence Once
+
+on:
+  push:
+    branches:
+      - agent/global-v3-convergence-boundedrun-validation-20260812
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 74c9bcd90015d13bcd95a9882433ffb6149de532
+          fetch-depth: 1
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Validate exact candidate and bounded-effect state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "74c9bcd90015d13bcd95a9882433ffb6149de532"
+          python - <<'PY'
+          import copy, hashlib, json
+          from pathlib import Path
+
+          def h(obj):
+              clone=copy.deepcopy(obj); clone['self_sha256']=None
+              return hashlib.sha256(json.dumps(clone,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+          def walk(v):
+              if v is None: raise AssertionError('REQUIRED_NULL_FIELD')
+              if isinstance(v,str) and ('NOT_REPORTED' in v or v.startswith('/mnt/data/final_') or 'sandbox:/mnt/data/' in v):
+                  raise AssertionError(f'FORBIDDEN_VALUE:{v}')
+              if isinstance(v,dict):
+                  for x in v.values(): walk(x)
+              elif isinstance(v,list):
+                  for x in v: walk(x)
+
+          root=Path('.')
+          profile=json.loads((root/'docs/CONTROLLED_AUTOMATION_PROFILE_V3.json').read_text())
+          adoption=json.loads((root/'docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json').read_text())
+          audit=json.loads((root/'docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json').read_text())
+          for obj in (profile,adoption,audit):
+              assert obj['self_sha256']==h(obj); walk(obj)
+          assert adoption['global_mandate_id']=='MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3'
+          assert adoption['local_profile_self_sha256']==profile['self_sha256']
+          assert audit['local_profile']['self_sha256']==profile['self_sha256']
+          assert profile['current_external_effects']['arbitrary_external_execution'] is False
+          assert adoption['arbitrary_external_execution_enabled_by_adoption'] is False
+          assert adoption['customer_data_access_by_adoption']==0
+          assert adoption['financial_effects']==0 and adoption['deletions']==0
+          for name in (
+              'activate_maximum_controlled_automation_v3_boundedrun_once.yml',
+              'apply_maximum_controlled_automation_v3_boundedrun_once.yml',
+              'finalize_maximum_controlled_automation_v3_boundedrun_once.yml',
+          ):
+              text=(root/'.github/workflows'/name).read_text()
+              assert 'workflow_dispatch:' in text and 'SUPERSEDED_INERT' in text
+              assert '\n  push:' not in text and '\n  schedule:' not in text
+          print(json.dumps({'status':'PASS','candidate':'74c9bcd90015d13bcd95a9882433ffb6149de532','schemas':'PASS','self_hashes':'PASS','arbitrary_external_execution':False,'customer_data_access':0,'financial_effects':0,'deletions':0,'user_action':'NONE'},sort_keys=True))
+          PY
+          python -m pip install --disable-pip-version-check -e '.[dev]'
+          ruff check app tests
+          pytest
