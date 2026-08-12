@@ -1,0 +1,67 @@
+name: Finalize BoundedRun Maximum Controlled Automation V3 Adoption Once
+
+on:
+  push:
+    branches:
+      - agent/global-maximum-controlled-automation-v3-boundedrun-finalize-20260812
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boundedrun-maximum-controlled-automation-v3-finalize-once
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Ensure exact local V3 adoption without arbitrary external effects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          BASE_MAIN="$(git rev-parse origin/main)"
+          git checkout -B finalization-target origin/main
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          base=Path('docs'); base.mkdir(parents=True,exist_ok=True)
+          adoption=base/'MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json'; audit=base/'BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json'
+          gates=['EXACT_ACTION_ALLOWLIST_AND_DENY_BY_DEFAULT','BUDGET_TIME_RESOURCE_AND_NETWORK_BOUNDS','SECRET_AND_PRIVATE_DATA_ISOLATION','IDEMPOTENCY_RECEIPTS_AND_REPLAY_PROTECTION','BACKUP_ROLLBACK_AND_POST_EFFECT_READBACK','INDEPENDENT_VALIDATION_AND_ADVERSARIAL_TESTING','MONITORING_ALERTING_AND_AUTOMATIC_CONTAINMENT','PUBLIC_DEMO_AND_CUSTOMER_DATA_BOUNDARIES']
+          a=json.loads(audit.read_text()) if audit.is_file() else {}
+          a.update({'schema':'BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1','version':'1.0.0','status':'ACTIVE_CANONICAL_LOCAL_READINESS_AUDIT','repository':'Elinfiny/boundedrun','source_main_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'global_mandate_candidate':{'mandate_id':'MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3','mandate_class':'GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION','canonical_path':'Elinfiny/genie-finds/operations/automation_bridge/MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3.json','supersedes':'MAXIMUM_SAFE_EXECUTION_AUTHORITY_V2'},'current_implementation_state':'CONTROLLED_AUTOMATION_RUNNER_FOUNDATION_A4_PRODUCTION_BOUNDARIES_NOT_YET_FULLY_ACCEPTED','final_operating_model':'A4_CONTROLLED_AUTONOMOUS_SAFE_AI_AUTOMATION_RUNNER_WITH_BOUNDED_EFFECTS','current_safety_gate_is_not_final_operating_model':True,'remaining_activation_gates':gates,'hosted_continuous_execution_status':'AVAILABLE_PARTIAL_REQUIRES_A4_ACCEPTANCE','safety':{'arbitrary_external_execution_enabled_by_patch':False,'public_effects':0,'external_messages':0,'new_spend':0,'secret_values_exposed':0,'financial_effects':0,'deletions':0},'user_action':'NONE','next_safe_action':'RECONCILE_BOUNDED_EFFECT_ENVELOPE_AND_HOSTED_MONITORING_WITHOUT_ENABLING_ARBITRARY_EXTERNAL_EXECUTION'})
+          audit.write_text(json.dumps(a,ensure_ascii=False,indent=2,sort_keys=True)+'\n')
+          obj=json.loads(adoption.read_text()) if adoption.is_file() else {}
+          obj.update({'schema':'PROJECT_GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION_V1','project_id':'BoundedRun','repository':'Elinfiny/boundedrun','status':'ACTIVE_BY_GLOBAL_ROLE_INHERITANCE_AFTER_GLOBAL_V3_PUBLICATION','global_mandate_id':'MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3','global_mandate_class':'GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION','global_source':'Elinfiny/genie-finds/operations/automation_bridge/MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3.json','global_mandate_resolution':'LIVE_MAIN_CANONICAL_PATH_AND_CENTRAL_PUBLICATION_RECEIPT','current_implementation_state':a['current_implementation_state'],'final_operating_model':a['final_operating_model'],'remaining_activation_gates':gates,'current_safety_gate_is_not_final_operating_model':True,'owner_intervention':'EXCEPTION_ONLY','arbitrary_external_execution_enabled_by_adoption':False,'public_effects_by_adoption':0,'no_idle_while_eligible_work_exists':True,'hosted_execution_required_for_background_claims':True,'readiness_audit_path':audit.as_posix(),'effective_date':'2026-08-12','user_action':'NONE'})
+          adoption.write_text(json.dumps(obj,ensure_ascii=False,indent=2,sort_keys=True)+'\n')
+          json.loads(adoption.read_text()); json.loads(audit.read_text())
+          PY
+          git diff --check
+          if ! git diff --quiet -- docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json; then
+            git config user.name "Elinfiny"
+            git config user.email "273768139+Elinfiny@users.noreply.github.com"
+            git add docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json
+            git commit -m "governance: finalize BoundedRun maximum controlled automation V3 adoption"
+            git fetch origin main
+            test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+            git push origin HEAD:main
+          fi
+          rm -rf /tmp/boundedrun-v3-final-readback
+          git clone --no-local --depth 1 --branch main "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/boundedrun-v3-final-readback >/dev/null 2>&1
+          python - <<'PY'
+          import json
+          a=json.load(open('/tmp/boundedrun-v3-final-readback/docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json')); r=json.load(open('/tmp/boundedrun-v3-final-readback/docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json'))
+          assert a['status']=='ACTIVE_BY_GLOBAL_ROLE_INHERITANCE_AFTER_GLOBAL_V3_PUBLICATION'; assert a['global_mandate_id']=='MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3'; assert a['arbitrary_external_execution_enabled_by_adoption'] is False; assert r['safety']['financial_effects']==0; assert a['user_action']=='NONE'
+          PY
+          echo "BOUNDEDRUN_V3_FINALIZATION=PASS"
+          echo "PROTECTED_EFFECTS=0"
+          echo "USER_ACTION=NONE"
