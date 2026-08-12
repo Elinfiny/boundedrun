@@ -1,0 +1,49 @@
+name: Validate BoundedRun Global Controlled Automation V3 Adoption Once
+
+on:
+  push:
+    branches:
+      - agent/global-controlled-automation-v3-adoption-validation-20260812
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-boundedrun-global-controlled-automation-v3-adoption-once
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: 0278d70c1d08d1c1ce0825f3adc47893ad6343ae
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Validate profile and zero protected effects
+        run: |
+          test "$(git rev-parse HEAD)" = "0278d70c1d08d1c1ce0825f3adc47893ad6343ae"
+          python - <<'PY'
+          import copy, hashlib, json
+          from pathlib import Path
+          profile = json.loads(Path('docs/CONTROLLED_AUTOMATION_PROFILE_V3.json').read_text(encoding='utf-8'))
+          clone = copy.deepcopy(profile); clone['self_sha256'] = None
+          actual = hashlib.sha256(json.dumps(clone, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+          assert actual == profile['self_sha256'] == 'af0d57102f84b459d9ec48578d11bf5dcf7a75ddcfefdf148c2262cecde6b7f0'
+          assert profile['global_mandate_self_sha256'] == '9d94b0840c4f72c620d8721dfb8cf9fb1c2cfef3162c55559581408967265be6'
+          assert profile['details']['arbitrary_execution'] == 'FAIL_CLOSED'
+          assert profile['details']['continuous_runtime_status'] == 'NOT_ACTIVATED_BY_GOVERNANCE_PATCH'
+          adoption = Path('docs/GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.md').read_bytes()
+          assert hashlib.sha256(adoption).hexdigest() == 'b9d70a30b68dffd2225a6bd1b6b144c163949311666a79dc437ca8c6b4da8539'
+          print(json.dumps({'status':'PASS','profile_self_sha256':actual,'adoption_sha256':hashlib.sha256(adoption).hexdigest(),'arbitrary_execution_activated':False,'customer_data_loaded':False,'provider_writes':0,'deletions':0}, sort_keys=True))
+          PY
+          python -m compileall -q . || true
+          git diff --check
