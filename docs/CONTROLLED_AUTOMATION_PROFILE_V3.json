@@ -1,0 +1,47 @@
+{
+  "continuous_execution": {
+    "background_work_claim_without_executor_receipt": "FORBIDDEN",
+    "hosted_executor_and_receipt_required": true,
+    "no_idle_while_eligible_work_exists": true
+  },
+  "current_external_effects": {
+    "contracts_accepted": 0,
+    "costs_created": 0,
+    "deletions": 0,
+    "external_messages": 0,
+    "payments_created": 0,
+    "secret_exposures": 0
+  },
+  "current_implementation_state": "A3_REVERSIBLE_CONTROLLED_DEMO_AND_RUNNER_FOUNDATION",
+  "current_safety_gate_is_not_final_operating_model": true,
+  "details": {
+    "arbitrary_execution": "FAIL_CLOSED",
+    "continuous_runtime_status": "NOT_ACTIVATED_BY_GOVERNANCE_PATCH",
+    "customer_data_authority": "NONE_UNTIL_VALIDATED_ENVELOPE",
+    "public_demo_status": "IN_PREVIEW_FOUNDATION"
+  },
+  "final_operating_model": "A4_CONTROLLED_AUTONOMOUS_SAFE_AI_AUTOMATION_RUNNER",
+  "global_gate_audit_self_sha256": "3b6271edb24336b97bad7482d33c18baa9515ab88abb15259873875560e7f4d9",
+  "global_mandate_path": "Elinfiny/genie-finds/operations/automation_bridge/MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3.json",
+  "global_mandate_self_sha256": "9d94b0840c4f72c620d8721dfb8cf9fb1c2cfef3162c55559581408967265be6",
+  "mandate_class": "GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION",
+  "mandate_id": "MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3",
+  "project_id": "BoundedRun",
+  "remaining_activation_gates": [
+    "CANONICAL_EXECUTION_ENVELOPE_AND_BUDGETS",
+    "ARBITRARY_EXECUTION_CONTAINMENT",
+    "CUSTOMER_DATA_AND_SECRET_BOUNDARIES",
+    "HOSTED_MONITORING_AND_AUDIT_RECEIPTS",
+    "ROLLBACK_AND_KILL_SWITCH_VALIDATION",
+    "PRODUCTION_SCALE_READINESS"
+  ],
+  "repository": "Elinfiny/boundedrun",
+  "schema": "CONTROLLED_AUTOMATION_PROJECT_PROFILE_V3",
+  "self_hash_convention": {
+    "algorithm": "SHA-256",
+    "input": "UTF-8 compact JSON with recursively sorted object keys, arrays preserved, self_sha256 set to null, no trailing newline"
+  },
+  "self_sha256": "af0d57102f84b459d9ec48578d11bf5dcf7a75ddcfefdf148c2262cecde6b7f0",
+  "status": "ACTIVE_CANONICAL_PROJECT_PROFILE",
+  "version": "3.0.0"
+}
