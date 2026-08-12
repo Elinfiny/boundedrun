@@ -18,7 +18,7 @@ Canonical charter SHA-256: `3f0dee18a159e5d3b033bdf0df51d94d175d9c50ae297fdae658
 
 Orice activitate materială este emisă prin:
 
-`OUTCOME, RATIONALE, SOURCE OF TRUTH, SCOPE, NON-GOALS, AUTHORITY, INPUTS, CONSTRAINTS, DEFINITION OF DONE, VALIDATION, ESCALATION TRIGGERS, BACKUP AND ROLLBACK, REPORT`.
+`OUTCOME, RATIONALE, SOURCE_OF_TRUTH, SCOPE, NON_GOALS, AUTHORITY, INPUTS, CONSTRAINTS, DEFINITION_OF_DONE, VALIDATION, ESCALATION_TRIGGERS, BACKUP_AND_ROLLBACK, REPORT`.
 
 Un mandat incomplet permite numai A0/A1 până la reconciliere. Universal Master-ul decide portofoliul, ordinea, alocarea, arbitrajul și acceptarea; executorul decide numai în limitele mandatului.
 
