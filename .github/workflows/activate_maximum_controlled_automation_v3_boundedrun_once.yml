@@ -1,0 +1,73 @@
+name: Activate BoundedRun Maximum Controlled Automation V3 Inheritance Once
+
+on:
+  push:
+    branches:
+      - agent/global-maximum-controlled-automation-v3-boundedrun-activation-20260812
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boundedrun-maximum-controlled-automation-v3-activation-once
+  cancel-in-progress: false
+
+jobs:
+  activate-local-pointer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Activate local V3 inheritance without public or arbitrary execution effects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          BASE_MAIN="$(git rev-parse origin/main)"
+          git checkout -B activation-target origin/main
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          adoption=Path('docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json')
+          audit=Path('docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json')
+          if not adoption.is_file() or not audit.is_file(): raise SystemExit('BOUNDEDRUN_V3_STAGING_OR_AUDIT_MISSING')
+          obj=json.loads(adoption.read_text())
+          if obj.get('global_mandate_id')!='MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3': raise SystemExit('WRONG_GLOBAL_MANDATE')
+          if not str(obj.get('final_operating_model','')).startswith('A4_'): raise SystemExit('FINAL_A4_TARGET_MISSING')
+          obj['status']='ACTIVE_BY_GLOBAL_ROLE_INHERITANCE_AFTER_GLOBAL_V3_PUBLICATION'
+          obj['global_mandate_resolution']='LIVE_MAIN_CANONICAL_PATH_AND_CENTRAL_PUBLICATION_RECEIPT'
+          obj['global_mandate_self_sha256_source']='RESOLVE_FROM_ELINFINY_GENIE_FINDS_LIVE_MAIN_CONTROL_STATE'
+          obj['arbitrary_external_execution_enabled_by_adoption']=False
+          obj['public_effects_by_adoption']=0
+          obj['user_action']='NONE'
+          adoption.write_text(json.dumps(obj,ensure_ascii=False,indent=2,sort_keys=True)+'\n')
+          json.loads(adoption.read_text()); json.loads(audit.read_text())
+          PY
+          git diff --check
+          git config user.name "Elinfiny"
+          git config user.email "273768139+Elinfiny@users.noreply.github.com"
+          git add docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json
+          git commit -m "governance: activate BoundedRun V3 global inheritance without protected effects"
+          TARGET_COMMIT="$(git rev-parse HEAD)"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          git push origin HEAD:main
+          rm -rf /tmp/boundedrun-v3-activation-readback
+          git clone --no-local --depth 1 --branch main "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/boundedrun-v3-activation-readback >/dev/null 2>&1
+          test "$(git -C /tmp/boundedrun-v3-activation-readback rev-parse HEAD)" = "$TARGET_COMMIT"
+          python - <<'PY'
+          import json
+          obj=json.load(open('/tmp/boundedrun-v3-activation-readback/docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json'))
+          assert obj['status']=='ACTIVE_BY_GLOBAL_ROLE_INHERITANCE_AFTER_GLOBAL_V3_PUBLICATION'
+          assert obj['arbitrary_external_execution_enabled_by_adoption'] is False
+          assert obj['user_action']=='NONE'
+          PY
+          echo "BOUNDEDRUN_V3_INHERITANCE=ACTIVE"
+          echo "PROTECTED_EFFECTS=0"
+          echo "USER_ACTION=NONE"
