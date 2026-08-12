@@ -1,129 +1,28 @@
-name: Apply BoundedRun Maximum Controlled Automation V3 Once
+name: Apply BoundedRun Maximum Controlled Automation V3 Once — Superseded Inert Receipt
 
 on:
-  push:
-    branches:
-      - agent/global-maximum-controlled-automation-v3-boundedrun-adoption-20260812
+  workflow_dispatch:
 
 permissions:
-  actions: read
-  contents: write
+  contents: read
 
 concurrency:
-  group: boundedrun-maximum-controlled-automation-v3-once
+  group: superseded-inert-apply-boundedrun-maximum-controlled-automation-v3-once
   cancel-in-progress: false
 
 jobs:
-  audit-adopt-publish:
+  superseded:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      PYTHONDONTWRITEBYTECODE: "1"
     steps:
-      - name: Checkout bootstrap branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.12"
-      - name: Audit bounded automation state and publish local V3 adoption
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CURRENT_RUN_ID: ${{ github.run_id }}
+      - name: Emit inert supersession receipt
+        shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main
-          BASE_MAIN="$(git rev-parse origin/main)"
-          git checkout -B adoption-target origin/main
-          python - <<'PY'
-          from __future__ import annotations
-          import json, os, re, subprocess, urllib.request
-          from datetime import datetime, timezone
-          from pathlib import Path
-
-          ROOT = Path.cwd(); REPO = os.environ["GITHUB_REPOSITORY"]
-          TOKEN = os.environ["GH_TOKEN"]; CURRENT_RUN_ID = int(os.environ["CURRENT_RUN_ID"])
-          def api(path: str):
-              req = urllib.request.Request(
-                  f"https://api.github.com/repos/{REPO}{path}",
-                  headers={"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json",
-                           "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "boundedrun-v3-audit"})
-              with urllib.request.urlopen(req, timeout=60) as response:
-                  return json.loads(response.read().decode())
-          active = api("/actions/runs?status=in_progress&per_page=100").get("workflow_runs", [])
-          queued = api("/actions/runs?status=queued&per_page=100").get("workflow_runs", [])
-          other = sorted({int(r["id"]) for r in active + queued if int(r.get("id", 0)) != CURRENT_RUN_ID})
-          if other: raise SystemExit(f"CONCURRENT_ACTIVE_OR_QUEUED_RUNS:{other}")
-
-          tracked = [Path(x.decode()) for x in subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0") if x]
-          readable = []
-          for path in tracked:
-              if not path.is_file() or path.stat().st_size > 2_000_000: continue
-              try: path.read_text(encoding="utf-8")
-              except Exception: continue
-              readable.append(path)
-          def paths_for(pattern: str):
-              rx = re.compile(pattern, re.I)
-              return sorted({p.as_posix() for p in readable if rx.search(p.as_posix()) or rx.search(p.read_text(encoding="utf-8", errors="replace"))})[:100]
-          guardrails = paths_for(r"bound|policy|allowlist|denylist|limit|sandbox|timeout|rollback|receipt|audit")
-          arbitrary_execution = paths_for(r"subprocess|shell|exec\(|eval\(|docker|container|command")
-          monitoring = paths_for(r"monitor|metric|health|alert|receipt|audit|log")
-          workflows = sorted(p.as_posix() for p in (ROOT / ".github/workflows").glob("*.y*ml"))
-          current = "CONTROLLED_AUTOMATION_RUNNER_FOUNDATION_A4_PRODUCTION_BOUNDARIES_NOT_YET_FULLY_ACCEPTED"
-          target = "A4_CONTROLLED_AUTONOMOUS_SAFE_AI_AUTOMATION_RUNNER_WITH_BOUNDED_EFFECTS"
-          gates = [
-              "EXACT_ACTION_ALLOWLIST_AND_DENY_BY_DEFAULT",
-              "BUDGET_TIME_RESOURCE_AND_NETWORK_BOUNDS",
-              "SECRET_AND_PRIVATE_DATA_ISOLATION",
-              "IDEMPOTENCY_RECEIPTS_AND_REPLAY_PROTECTION",
-              "BACKUP_ROLLBACK_AND_POST_EFFECT_READBACK",
-              "INDEPENDENT_VALIDATION_AND_ADVERSARIAL_TESTING",
-              "MONITORING_ALERTING_AND_AUTOMATIC_CONTAINMENT",
-              "PUBLIC_DEMO_AND_CUSTOMER_DATA_BOUNDARIES",
-          ]
-          now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-          audit = {
-              "schema":"BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1","version":"1.0.0",
-              "status":"ACTIVE_CANONICAL_LOCAL_READINESS_AUDIT","generated_at_utc":now,"repository":REPO,
-              "source_main_commit":subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
-              "global_mandate_candidate":{"mandate_id":"MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3","mandate_class":"GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION","canonical_path":"Elinfiny/genie-finds/operations/automation_bridge/MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3.json","supersedes":"MAXIMUM_SAFE_EXECUTION_AUTHORITY_V2"},
-              "current_implementation_state":current,"final_operating_model":target,
-              "current_safety_gate_is_not_final_operating_model":True,"remaining_activation_gates":gates,
-              "evidence":{"guardrail_paths":guardrails,"execution_surface_paths":arbitrary_execution,"monitoring_paths":monitoring,"hosted_workflow_paths":workflows},
-              "hosted_continuous_execution_status":"AVAILABLE_PARTIAL_REQUIRES_A4_ACCEPTANCE" if workflows else "NOT_CONFIGURED",
-              "safety":{"arbitrary_external_execution_enabled_by_patch":False,"public_effects":0,"external_messages":0,"new_spend":0,"secret_values_exposed":0,"financial_effects":0,"deletions":0},
-              "user_action":"NONE","next_safe_action":"RECONCILE_BOUNDED_EFFECT_ENVELOPE_AND_HOSTED_MONITORING_WITHOUT_ENABLING_ARBITRARY_EXTERNAL_EXECUTION"}
-          out = ROOT / "docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json"
-          out.parent.mkdir(parents=True, exist_ok=True); out.write_text(json.dumps(audit,ensure_ascii=False,indent=2,sort_keys=True)+"\n")
-          adoption = {
-              "schema":"PROJECT_GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION_V1","project_id":"BoundedRun","repository":REPO,
-              "status":"STAGED_LOCAL_ADOPTION_PENDING_GLOBAL_V3_CANONICAL_PUBLICATION","global_mandate_id":"MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3",
-              "global_mandate_class":"GLOBAL_MAXIMUM_CONTROLLED_AUTOMATION","global_source":"Elinfiny/genie-finds/operations/automation_bridge/MAXIMUM_SAFE_EXECUTION_AUTHORITY_V3.json",
-              "supersedes_local_semantics":"MAXIMUM_SAFE_EXECUTION_AUTHORITY_V2_PROJECT_ADOPTION","current_implementation_state":current,
-              "final_operating_model":target,"remaining_activation_gates":gates,"current_safety_gate_is_not_final_operating_model":True,
-              "owner_intervention":"EXCEPTION_ONLY","no_idle_while_eligible_work_exists":True,"hosted_execution_required_for_background_claims":True,
-              "readiness_audit_path":out.relative_to(ROOT).as_posix(),"effective_date":"2026-08-12","user_action":"NONE"}
-          ap = ROOT / "docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json"
-          ap.write_text(json.dumps(adoption,ensure_ascii=False,indent=2,sort_keys=True)+"\n")
-          json.loads(out.read_text()); json.loads(ap.read_text())
-          print(json.dumps({"status":"PASS","current_state":current,"final_target":target,"user_action":"NONE","protected_effects":0,"financial_effects":0,"deletions":0},sort_keys=True))
-          PY
-          git diff --check
-          git config user.name "Elinfiny"
-          git config user.email "273768139+Elinfiny@users.noreply.github.com"
-          git add docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json
-          git commit -m "governance: adopt BoundedRun maximum controlled automation V3 target"
-          TARGET_COMMIT="$(git rev-parse HEAD)"
-          git fetch origin main
-          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
-          git push origin HEAD:main
-          rm -rf /tmp/boundedrun-v3-readback
-          git clone --no-local --depth 1 --branch main "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/boundedrun-v3-readback >/dev/null 2>&1
-          test "$(git -C /tmp/boundedrun-v3-readback rev-parse HEAD)" = "$TARGET_COMMIT"
-          python -m json.tool /tmp/boundedrun-v3-readback/docs/MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION.json >/dev/null
-          python -m json.tool /tmp/boundedrun-v3-readback/docs/BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_READINESS_AUDIT_V1.json >/dev/null
-          echo "BOUNDEDRUN_MAXIMUM_CONTROLLED_AUTOMATION_V3_ADOPTION=PASS"
-          echo "PUBLIC_OR_PROTECTED_EFFECTS=0"
+          echo "WORKFLOW_STATUS=SUPERSEDED_INERT"
+          echo "REASON=TARGETED_GLOBAL_V3_CONVERGENCE_COMPLETED_OR_REPLACED_BY_CANONICAL_PAYLOADS"
+          echo "SUPERSEDED_BY=CENTRAL_GLOBAL_V3_CONVERGENCE_RECEIPT_AND_CURRENT_MAIN_VALIDATION"
+          echo "CANONICAL_MUTATIONS=0"
+          echo "PROTECTED_EFFECTS=0"
+          echo "FINANCIAL_EFFECTS=0"
+          echo "DELETIONS=0"
           echo "USER_ACTION=NONE"
